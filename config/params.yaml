@@ -1,0 +1,9 @@
+depth_pro:
+  ros__parameters:
+    # Model configuration
+    model_file : ''
+    encoder: vits
+    device : 'cuda:0'
+    # ROS topic configuration
+    image_topic: /image
+    depth_image_topic : /depth
