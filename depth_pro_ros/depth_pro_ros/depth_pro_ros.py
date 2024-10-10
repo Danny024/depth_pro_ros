@@ -20,59 +20,153 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-
-#Python libraries
+# Python libraries
 import time
 import numpy as np
 import torch
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 
-
-#ROS2 libraries
+# ROS2 libraries
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
 from sensor_msgs.msg import Image
 
-
-#Depth Pro library
-import depth_pro
-
+# Depth Pro library
+from depth_pro import create_model_and_transforms, DepthProConfig
 
 class DepthProRos(Node):
-     """DepthProROS node
+    """DepthProROS node
 
-    This node subscribes to an image topic and publishes a depth image [in m ]and focal length
+    This node subscribes to an image topic and publishes a depth image [in meters] and focal length.
 
     Parameters
     ----------
-        image_topic : str
-            Topic where the image will be subscribed.
-        depth_image_topic : str
-            Topic where the raw depth image will be published.
-        device : str
-            Device to use for the inference (cpu or cuda).
-        model_file : str
-            Path to the model.
-        
+    image_topic : str
+        Topic where the image will be subscribed.
+    depth_image_topic : str
+        Topic where the raw depth image will be published.
+    device : str
+        Device to use for the inference (cpu or cuda).
+    model_file : str
+        Path to the model.
 
     Subscribers
     ----------
-        image_topic : sensor_msgs.msg.Image
-            Image topic where the rgb image will be subscribed.
+    image_topic : sensor_msgs.msg.Image
+        Image topic where the RGB image will be subscribed.
 
     Publishers
     ----------
-        depth : sensor_msgs.msg.Image
-            Image topic where the depth image will be published.
+    depth : sensor_msgs.msg.Image
+        Image topic where the depth image will be published.
 
     Methods
     -------
-        __init__(self)
-            Initializes the node.
-        get_params(self)
-            Gets the ros2 parameters.
-        image_callback(self, image_msg: Image)
-            Callback function for the image topic.
+    __init__(self)
+        Initializes the node.
+    get_params(self)
+        Gets the ROS2 parameters.
+    image_callback(self, image_msg: Image)
+        Callback function for the image topic.
     """
+    
+    def __init__(self):
+        """Initializes the DepthProROS node."""
+        super().__init__('depth_pro_ros')
+        self.get_params()
+        self.bridge = CvBridge()
+
+        if self.device != 'cpu':
+            if not torch.cuda.is_available():
+                self.get_logger().info(f'Device could not be set to: [{self.device}] ...')
+                self.device = "cpu"
+        self.get_logger().info(f'Setting device to: [{self.device}]')
+
+        # Load Depth Pro model and transforms
+        self.model, self.transforms = create_model_and_transforms(
+            config=DepthProConfig(checkpoint_uri=self.model_file),
+            device=self.device,
+            precision=torch.float32
+        )
+        self.model.eval()
+
+         # Create common publishers
+        sensor_qos_profile = QoSProfile(
+            durability=QoSDurabilityPolicy.VOLATILE,
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=1)
+
+        # Publisher for the depth images
+        self.depth_pub = self.create_publisher(Image, self.depth_image_topic, sensor_qos_profile)
+
+        # Subscriber to the image topic
+        self.image_sub = self.create_subscription(
+            Image, self.image_topic, self.image_callback, sensor_qos_profile)
+
+        self.get_logger().info('DepthProROS node has been initialized')
+
+    def get_params(self):
+        """Gets the ROS2 parameters."""
+        self.declare_parameter('image_topic', '/image_raw')
+        self.declare_parameter('depth_image_topic', '/depth_image')
+        #self.declare_parameter('device', 'cpu')
+        self.declare_parameter('device', 'cuda:0')
+        self.declare_parameter('model_file', 'depth_pro.pt')
+
+        self.image_topic = self.get_parameter('image_topic').value
+        self.depth_image_topic = self.get_parameter('depth_image_topic').value
+        self.device = torch.device(self.get_parameter('device').value)
+        self.model_file = self.get_parameter('model_file').value
+
+    def image_callback(self, image_msg: Image):
+        """Callback function for the image topic.
+
+        Parameters
+        ----------
+        image_msg : sensor_msgs.msg.Image
+            Image message.
+        """
+        try:
+            # Convert the ROS Image message to OpenCV format
+            cv_image = self.bridge.imgmsg_to_cv2(image_msg, 'bgr8')
+
+            # Convert the image to a PyTorch tensor and apply transformations
+            input_tensor = self.transforms(cv_image).unsqueeze(0)
+
+            # Perform depth estimation using DepthPro
+            with torch.no_grad():
+                output = self.model.infer(input_tensor)
+
+            # Extract the depth map from the output
+            depth_image = output["depth"].cpu().numpy()
+
+            # Convert the depth map to a ROS Image message
+            depth_image_msg = self.bridge.cv2_to_imgmsg(depth_image, '32FC1')
+            depth_image_msg.header = image_msg.header
+
+            # Publish the depth image
+            self.depth_pub.publish(depth_image_msg)
+
+            # Log the focal length
+            focal_length = output["focallength_px"]
+            self.get_logger().info(f'Focal length: {focal_length}')
+
+        except CvBridgeError as e:
+            self.get_logger().error(f'CvBridgeError: {e}')
+        except Exception as e:
+            self.get_logger().error(f'Error processing image: {e}')
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    depth_pro_ros = DepthProRos()
+    rclpy.spin(depth_pro_ros)
+    depth_pro_ros.destroy_node()
+    rclpy.shutdown() 
+
+if __name__ == '__main__':
+    main()   
+
