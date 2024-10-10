@@ -1,9 +1,3 @@
-[submodule "ml-depth-pro"]
-	path = ml-depth-pro
-	url = https://github.com/apple/ml-depth-pro
-[submodule "depth_pro_module"]
-	path = depth_pro_module
-	url = https://github.com/apple/ml-depth-pro
 [submodule "depth_pro"]
 	path = depth_pro
 	url = https://github.com/apple/ml-depth-pro
