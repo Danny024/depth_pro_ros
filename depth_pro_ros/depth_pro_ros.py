@@ -29,7 +29,7 @@ import os
 from cv_bridge import CvBridge, CvBridgeError
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'depth_pro', 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'depth_pro', 'src'))
 print ("success")
 
 
@@ -93,7 +93,7 @@ class DepthProRos(Node):
         self.get_logger().info(f'Setting device to: [{self.device}]')
 
         # Dynamically construct the path to the checkpoint file
-        checkpoint_path = os.path.join(os.path.dirname(__file__), '..', '..', 'checkpoints', 'depth_pro.pt')
+        checkpoint_path = os.path.join(os.path.dirname(__file__), '..', 'checkpoints', 'depth_pro.pt')
         print (checkpoint_path)
 
         # Use the default configuration and update the checkpoint_uri dynamically
