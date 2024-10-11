@@ -30,3 +30,65 @@ from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
 from nav2_common.launch import RewrittenYaml
 
+
+def generate_launch_description():
+    # Getting directories and launch-files
+    depth_pro_dir = get_package_share_directory('depth_pro_ros')
+    default_params_file = os.path.join(depth_pro_dir, 'config', 'params.yaml')
+    default_checkpoint_file = os.path.join(depth_pro_dir, 'checkpoints', 'depth_pro.pt')
+
+    # Input parameters declaration
+    params_file = LaunchConfiguration('params_file')
+    checkpoint_file = LaunchConfiguration('checkpoint_file')
+    log_level = LaunchConfiguration('log_level')
+
+    declare_params_file_arg = DeclareLaunchArgument(
+        'params_file',
+        default_value=default_params_file,
+        description='Full path to the ROS2 parameters file with detection configuration'
+    )
+
+    declare_model_file_arg = DeclareLaunchArgument(
+        'checkpoint_file',
+        default_value=default_checkpoint_file,
+        description='Full path to the model file'
+    )
+
+    declare_log_level_arg = DeclareLaunchArgument(
+        name='log_level',
+        default_value='info',
+        description='Logging level (info, debug, ...)'
+    )
+
+    # Create our own temporary YAML files that include substitutions
+    param_substitutions = {
+        'checkpoint_file': checkpoint_file,
+    }
+
+    configured_params = RewrittenYaml(
+        source_file=params_file,
+        root_key='',
+        param_rewrites=param_substitutions,
+        convert_types=True
+    )
+
+    # Prepare the detection node.
+    depth_anything_node = Node(
+        package='depth_pro_ros',
+        namespace='',
+        executable='depth_pro_ros',
+        name='depth_pro',
+        parameters=[configured_params],
+        emulate_tty=True,
+        output='screen',
+        arguments=[
+            '--ros-args',
+            '--log-level', ['depth_pro:=', LaunchConfiguration('log_level')]]
+    )
+
+    return LaunchDescription([
+        declare_params_file_arg,
+        declare_model_file_arg,
+        declare_log_level_arg,
+        depth_anything_node
+    ])

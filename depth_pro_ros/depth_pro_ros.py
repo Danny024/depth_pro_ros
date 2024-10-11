@@ -41,7 +41,7 @@ from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, QoSReli
 from sensor_msgs.msg import Image
 
 # Depth Pro library
-from depth_pro.depth_pro import DEFAULT_MONODEPTH_CONFIG_DICT, create_model_and_transforms, DepthProConfig
+from depth_pro.depth_pro import DEFAULT_MONODEPTH_CONFIG_DICT, create_model_and_transforms, DepthProConfig,DepthPro
 print("success")
 
 class DepthProRos(Node):
