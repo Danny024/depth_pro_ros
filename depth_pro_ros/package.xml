@@ -2,8 +2,8 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>depth_pro_ros</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <version>1.0.0</version>
+  <description> A ROS2 wrapper for Depth Pro model</description>
   <maintainer email="danieleneh024@gmail.com">daniel</maintainer>
   <license>TODO: License declaration</license>
 

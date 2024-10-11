@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2024 Daniel Eneh <danieleneh024@gmail.com>
 #
@@ -25,7 +25,14 @@ import time
 import numpy as np
 import torch
 import cv2
+import os
 from cv_bridge import CvBridge, CvBridgeError
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'depth_pro', 'src'))
+print ("success")
+
+
 
 # ROS2 libraries
 import rclpy
@@ -34,7 +41,8 @@ from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, QoSReli
 from sensor_msgs.msg import Image
 
 # Depth Pro library
-from depth_pro import create_model_and_transforms, DepthProConfig
+from depth_pro.depth_pro import DEFAULT_MONODEPTH_CONFIG_DICT, create_model_and_transforms, DepthProConfig
+print("success")
 
 class DepthProRos(Node):
     """DepthProROS node
@@ -49,7 +57,7 @@ class DepthProRos(Node):
         Topic where the raw depth image will be published.
     device : str
         Device to use for the inference (cpu or cuda).
-    model_file : str
+    checkpoint_file : str
         Path to the model.
 
     Subscribers
@@ -84,12 +92,20 @@ class DepthProRos(Node):
                 self.device = "cpu"
         self.get_logger().info(f'Setting device to: [{self.device}]')
 
+        # Dynamically construct the path to the checkpoint file
+        checkpoint_path = os.path.join(os.path.dirname(__file__), '..', '..', 'checkpoints', 'depth_pro.pt')
+
+        # Use the default configuration and update the checkpoint_uri dynamically
+        custom_config = DEFAULT_MONODEPTH_CONFIG_DICT
+        custom_config.checkpoint_uri = checkpoint_path
+
         # Load Depth Pro model and transforms
         self.model, self.transforms = create_model_and_transforms(
-            config=DepthProConfig(checkpoint_uri=self.model_file),
+            config=custom_config,  # Use default config and updated checkpoint path
             device=self.device,
             precision=torch.float32
         )
+
         self.model.eval()
 
          # Create common publishers
@@ -112,14 +128,14 @@ class DepthProRos(Node):
         """Gets the ROS2 parameters."""
         self.declare_parameter('image_topic', '/image_raw')
         self.declare_parameter('depth_image_topic', '/depth_image')
-        #self.declare_parameter('device', 'cpu')
-        self.declare_parameter('device', 'cuda:0')
-        self.declare_parameter('model_file', 'depth_pro.pt')
+        self.declare_parameter('device', 'cpu')
+        #self.declare_parameter('device', 'cuda:0')
+        self.declare_parameter('checkpoint_file', 'depth_pro.pt')
 
         self.image_topic = self.get_parameter('image_topic').value
         self.depth_image_topic = self.get_parameter('depth_image_topic').value
         self.device = torch.device(self.get_parameter('device').value)
-        self.model_file = self.get_parameter('model_file').value
+        self.checkpoint_file = self.get_parameter('checkpoint_file').value
 
     def image_callback(self, image_msg: Image):
         """Callback function for the image topic.
