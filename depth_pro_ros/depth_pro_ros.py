@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # Copyright (c) 2024 Daniel Eneh <danieleneh024@gmail.com>
 #
@@ -94,6 +94,7 @@ class DepthProRos(Node):
 
         # Dynamically construct the path to the checkpoint file
         checkpoint_path = os.path.join(os.path.dirname(__file__), '..', '..', 'checkpoints', 'depth_pro.pt')
+        print (checkpoint_path)
 
         # Use the default configuration and update the checkpoint_uri dynamically
         custom_config = DEFAULT_MONODEPTH_CONFIG_DICT
@@ -146,27 +147,27 @@ class DepthProRos(Node):
             Image message.
         """
         try:
-            # Convert the ROS Image message to OpenCV format
+            # Converts the ROS Image message to OpenCV formatiing
             cv_image = self.bridge.imgmsg_to_cv2(image_msg, 'bgr8')
 
-            # Convert the image to a PyTorch tensor and apply transformations
+            # Converts the image to PyTorch tensor and apply transformations
             input_tensor = self.transforms(cv_image).unsqueeze(0)
 
-            # Perform depth estimation using DepthPro
+            # depth estimation using DepthPro Inference
             with torch.no_grad():
                 output = self.model.infer(input_tensor)
 
-            # Extract the depth map from the output
+            # Extracts the depth map from the output
             depth_image = output["depth"].cpu().numpy()
 
-            # Convert the depth map to a ROS Image message
+            # Converts depth map to a ROS Image message
             depth_image_msg = self.bridge.cv2_to_imgmsg(depth_image, '32FC1')
             depth_image_msg.header = image_msg.header
 
-            # Publish the depth image
+            # Publishes the depth image
             self.depth_pub.publish(depth_image_msg)
 
-            # Log the focal length
+            # Logs out the focal length
             focal_length = output["focallength_px"]
             self.get_logger().info(f'Focal length: {focal_length}')
 
