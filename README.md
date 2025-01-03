@@ -10,3 +10,5 @@ Still Under development
 -  Perform Model Prunning
 -  Model Quantization and Distillation
 -  Make use of Flash Attention Technique to improve model
+
+## Open to Contributions
