@@ -10,7 +10,7 @@ Test machine
 
 
 ## TO DO
-- Suggestion to Improve Inference Time:
+### Suggestion to Improve Inference Time:
 -  Perform Model Prunning
 -  Model Quantization and Distillation
 -  Make use of Flash Attention Technique to improve model
