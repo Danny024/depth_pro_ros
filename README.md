@@ -1,6 +1,6 @@
 # depth_pro_ros
-A depth Pro wrapper for ROS2
-The depth pro model out  of the box predicts focal length and the metric depth (z dimension) for any image with an accuracy of about 90%.
+A depth Pro wrapper for ROS2.
+The depth pro model out  of the box to predict focal length and the metric depth (z dimension) for any image with an accuracy of about 90%.
 
 Test machine
  - Tested  on Alienware Laptop 4090RTX Nvidia GPU
